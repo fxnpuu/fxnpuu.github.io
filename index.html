@@ -114,4 +114,264 @@
       {name: "Burn 10 Cards", cost: 80, description: "Remove 10 cards from the deck.", immediate: false, effect: function() {
           let count = Math.min(10, deck.length);
           deck.splice(deck.length - count, count);
-          document.getElementById('message').textContent = "Burned "
+          document.getElementById('message').textContent = "Burned " + count + " cards.";
+      }},
+      {name: "Guaranteed Lower", cost: 70, description: "Next card will be lower than current.", immediate: false, effect: function() {
+          guaranteedLower = true;
+          document.getElementById('message').textContent = "Guaranteed Lower activated for next draw.";
+      }},
+      {name: "Skip One Card", cost: 20, description: "Discard the next card.", immediate: false, effect: function() {
+          if (deck.length > 0) {
+             let skipped = deck.pop();
+             document.getElementById('message').textContent = "Skipped card: " + skipped.rank + skipped.suit;
+          } else {
+             document.getElementById('message').textContent = "No cards to skip.";
+          }
+      }},
+      {name: "Peek Next Card", cost: 30, description: "Reveal the next card without drawing.", immediate: false, effect: function() {
+          if (deck.length > 0) {
+             let peekCard = deck[deck.length - 1];
+             document.getElementById('message').textContent = "Next card is: " + peekCard.rank + peekCard.suit;
+          } else {
+             document.getElementById('message').textContent = "No cards to peek.";
+          }
+      }},
+      {name: "Rearrange Deck", cost: 100, description: "Shuffle the remaining deck.", immediate: false, effect: function() {
+             shuffleDeck();
+             document.getElementById('message').textContent = "Deck rearranged.";
+      }}
+    ];
+
+    // Functions to update displays
+    function updateMoney() {
+      document.getElementById('moneyDisplay').textContent = "Money: " + money;
+    }
+    function updateLives() {
+      document.getElementById('livesDisplay').textContent = "Extra Lives: " + extraLives;
+    }
+    function updateInventory() {
+      const invDiv = document.getElementById('inventoryItems');
+      invDiv.innerHTML = "";
+      if (inventory.length === 0) {
+        invDiv.textContent = "No items in inventory.";
+        return;
+      }
+      inventory.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "invItem";
+        itemDiv.textContent = item.name + " - " + item.description + " (Cost: " + item.cost + ")";
+        const useBtn = document.createElement('button');
+        useBtn.textContent = "Use";
+        useBtn.addEventListener('click', function() {
+          item.effect();
+          // Remove item from inventory after use
+          inventory.splice(index, 1);
+          updateInventory();
+        });
+        itemDiv.appendChild(useBtn);
+        invDiv.appendChild(itemDiv);
+      });
+    }
+
+    // Deck functions
+    function createDeck() {
+      deck = [];
+      for (let suit of suits) {
+        for (let rank of ranks) {
+          deck.push({ suit: suit, rank: rank, value: rankValues[rank] });
+        }
+      }
+    }
+    function shuffleDeck() {
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+    function drawCard() {
+      if (guaranteedLower) {
+        // Force draw a card that is lower than currentCard if possible.
+        const lowerCards = deck.filter(card => card.value < currentCard.value);
+        if (lowerCards.length > 0) {
+          // Pick one at random and remove it from deck.
+          const idx = Math.floor(Math.random() * lowerCards.length);
+          const chosen = lowerCards[idx];
+          // Remove chosen card from deck.
+          deck = deck.filter(card => card !== chosen);
+          guaranteedLower = false;
+          return chosen;
+        }
+        // If none available, fall back to normal draw.
+        guaranteedLower = false;
+      }
+      return deck.pop();
+    }
+    function displayCard(card) {
+      document.getElementById('cardDisplay').textContent = card.rank + card.suit;
+    }
+
+    // Game flow functions
+    function startGame() {
+      createDeck();
+      shuffleDeck();
+      money = 0;
+      extraLives = 0;
+      inventory = [];
+      guaranteedLower = false;
+      updateMoney();
+      updateLives();
+      updateInventory();
+      document.getElementById('message').textContent = "";
+      document.getElementById('restartBtn').style.display = "none";
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
+      document.getElementById('higherBtn').disabled = false;
+      document.getElementById('lowerBtn').disabled = false;
+      currentCard = drawCard();
+      displayCard(currentCard);
+    }
+    function endGame(msg) {
+      document.getElementById('message').textContent = msg;
+      document.getElementById('higherBtn').disabled = true;
+      document.getElementById('lowerBtn').disabled = true;
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
+      document.getElementById('restartBtn').style.display = "inline-block";
+    }
+    function checkWinCondition() {
+      if (deck.length === 0) {
+        endGame("Congratulations! You've run out of cards. Total money: " + money);
+        return true;
+      }
+      return false;
+    }
+    function triggerBonusPhase() {
+      // Disable guessing buttons while in bonus phase.
+      document.getElementById('higherBtn').disabled = true;
+      document.getElementById('lowerBtn').disabled = true;
+      document.getElementById('spinBtn').style.display = "inline-block";
+      document.getElementById('continueBtn').style.display = "inline-block";
+      document.getElementById('message').textContent = "Correct! Would you like to spin for bonus? (Spin risks game over)";
+    }
+    function spinRoulette() {
+      // 1 in 6 chance to fail.
+      const spinResult = Math.floor(Math.random() * 6) + 1;
+      if (spinResult === 1) {
+        endGame("Unlucky spin! You got the live bullet. Final money: " + money);
+      } else {
+        money += 20; // bonus money
+        updateMoney();
+        document.getElementById('message').textContent = "Lucky spin! Bonus awarded. Keep going...";
+        document.getElementById('spinBtn').style.display = "none";
+        document.getElementById('continueBtn').style.display = "none";
+        document.getElementById('higherBtn').disabled = false;
+        document.getElementById('lowerBtn').disabled = false;
+      }
+    }
+    function continueGame() {
+      document.getElementById('message').textContent = "Continuing without bonus.";
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
+      document.getElementById('higherBtn').disabled = false;
+      document.getElementById('lowerBtn').disabled = false;
+    }
+
+    // Guess button event handlers
+    document.getElementById('higherBtn').addEventListener('click', function() {
+      if (checkWinCondition()) return;
+      let nextCard = drawCard();
+      displayCard(nextCard);
+      if (nextCard.value > currentCard.value) {
+        money += 10;
+        updateMoney();
+        currentCard = nextCard;
+        // Trigger bonus spin option after correct guess
+        triggerBonusPhase();
+      } else {
+        if (extraLives > 0) {
+          extraLives--;
+          updateLives();
+          document.getElementById('message').textContent = "Wrong guess! Extra life used.";
+          currentCard = nextCard;
+          displayCard(currentCard);
+        } else {
+          endGame("Wrong guess! Final money: " + money);
+        }
+      }
+    });
+    document.getElementById('lowerBtn').addEventListener('click', function() {
+      if (checkWinCondition()) return;
+      let nextCard = drawCard();
+      displayCard(nextCard);
+      if (nextCard.value < currentCard.value) {
+        money += 10;
+        updateMoney();
+        currentCard = nextCard;
+        triggerBonusPhase();
+      } else {
+        if (extraLives > 0) {
+          extraLives--;
+          updateLives();
+          document.getElementById('message').textContent = "Wrong guess! Extra life used.";
+          currentCard = nextCard;
+          displayCard(currentCard);
+        } else {
+          endGame("Wrong guess! Final money: " + money);
+        }
+      }
+    });
+    // Bonus spin buttons
+    document.getElementById('spinBtn').addEventListener('click', spinRoulette);
+    document.getElementById('continueBtn').addEventListener('click', continueGame);
+    // Restart button
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+
+    // Shop UI handling
+    function populateShop() {
+      const shopDiv = document.getElementById('shopItems');
+      shopDiv.innerHTML = "";
+      shopItems.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "shopItem";
+        itemDiv.textContent = item.name + " - " + item.description + " (Cost: " + item.cost + ")";
+        const buyBtn = document.createElement('button');
+        buyBtn.textContent = "Buy";
+        buyBtn.addEventListener('click', function() {
+          if (money >= item.cost) {
+            money -= item.cost;
+            updateMoney();
+            // If immediate, apply effect; otherwise, add to inventory.
+            if (item.immediate) {
+              item.effect();
+            } else {
+              inventory.push(item);
+              updateInventory();
+              document.getElementById('message').textContent = item.name + " purchased and added to inventory.";
+            }
+          } else {
+            document.getElementById('message').textContent = "Not enough money for " + item.name;
+          }
+        });
+        itemDiv.appendChild(buyBtn);
+        shopDiv.appendChild(itemDiv);
+      });
+    }
+    // Toggle shop panel visibility
+    document.getElementById('toggleShopBtn').addEventListener('click', function() {
+      const shopPanel = document.getElementById('shopPanel');
+      if (shopPanel.style.display === "none") {
+        shopPanel.style.display = "block";
+        populateShop();
+      } else {
+        shopPanel.style.display = "none";
+      }
+    });
+    document.getElementById('closeShopBtn').addEventListener('click', function() {
+      document.getElementById('shopPanel').style.display = "none";
+    });
+
+    // Start game on page load
+    startGame();
+  </script>
+</body>
+</html>

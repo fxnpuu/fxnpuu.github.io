@@ -280,20 +280,33 @@
       document.getElementById('continueBtn').style.display = "inline-block";
       document.getElementById('message').textContent = "Correct! Would you like to spin for bonus? (Spin risks game over)";
     }
-    function spinRoulette() {
-      const spinResult = Math.floor(Math.random() * 6) + 1;
-      if (spinResult === 1) {
-        endGame("Unlucky spin! You got the live bullet. Final money: " + money);
-      } else {
-        money += 20;
-        updateMoney();
-        document.getElementById('message').textContent = "Lucky spin! Bonus awarded. Keep going...";
-        document.getElementById('spinBtn').style.display = "none";
-        document.getElementById('continueBtn').style.display = "none";
-        document.getElementById('higherBtn').disabled = false;
-        document.getElementById('lowerBtn').disabled = false;
-      }
+function spinRoulette() {
+  const spinResult = Math.floor(Math.random() * 6) + 1;
+  if (spinResult === 1) {
+    if (extraLives > 0) {
+      extraLives--;
+      updateLives();
+      money += 20;
+      updateMoney();
+      document.getElementById('message').textContent = "Unlucky spin, but your extra life saved you! Bonus awarded. Keep going...";
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
+      document.getElementById('higherBtn').disabled = false;
+      document.getElementById('lowerBtn').disabled = false;
+    } else {
+      endGame("Unlucky spin! You got the live bullet. Final money: " + money);
     }
+  } else {
+    money += 20;
+    updateMoney();
+    document.getElementById('message').textContent = "Lucky spin! Bonus awarded. Keep going...";
+    document.getElementById('spinBtn').style.display = "none";
+    document.getElementById('continueBtn').style.display = "none";
+    document.getElementById('higherBtn').disabled = false;
+    document.getElementById('lowerBtn').disabled = false;
+  }
+}
+
     function continueGame() {
       document.getElementById('message').textContent = "Continuing without bonus.";
       document.getElementById('spinBtn').style.display = "none";

@@ -1,1 +1,167 @@
-<h1>Hello!</h1>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Higher or Lower Card Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    #game {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      display: inline-block;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .card {
+      font-size: 48px;
+      margin: 20px;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #scoreDisplay {
+      font-size: 20px;
+      margin: 10px;
+    }
+    #message {
+      font-size: 20px;
+      margin: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <h1>Higher or Lower</h1>
+    <div id="cardDisplay" class="card"></div>
+    <div id="scoreDisplay"></div>
+    <div id="message"></div>
+    <button id="higherBtn">Higher</button>
+    <button id="lowerBtn">Lower</button>
+    <button id="restartBtn" style="display: none;">Restart</button>
+  </div>
+
+  <script>
+    let deck = [];
+    let currentCard = null;
+    let score = 0;
+    
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const rankValues = {
+      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+      'J': 11, 'Q': 12, 'K': 13, 'A': 14  // Ace is high
+    };
+
+    // Create a deck of 52 cards
+    function createDeck() {
+      deck = [];
+      for (let suit of suits) {
+        for (let rank of ranks) {
+          deck.push({ suit: suit, rank: rank, value: rankValues[rank] });
+        }
+      }
+    }
+    
+    // Shuffle the deck using the Fisher-Yates algorithm
+    function shuffleDeck() {
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+    
+    // Draw a card from the deck
+    function drawCard() {
+      return deck.pop();
+    }
+    
+    // Display the card on screen
+    function displayCard(card) {
+      const cardDisplay = document.getElementById('cardDisplay');
+      cardDisplay.textContent = card.rank + card.suit;
+    }
+    
+    // Update the score display
+    function updateScore() {
+      document.getElementById('scoreDisplay').textContent = "Score: " + score;
+    }
+    
+    // Start or restart the game
+    function startGame() {
+      createDeck();
+      shuffleDeck();
+      score = 0;
+      updateScore();
+      document.getElementById('message').textContent = "";
+      document.getElementById('restartBtn').style.display = "none";
+      currentCard = drawCard();
+      displayCard(currentCard);
+      document.getElementById('higherBtn').disabled = false;
+      document.getElementById('lowerBtn').disabled = false;
+    }
+    
+    // End the game with a message
+    function endGame(message) {
+      document.getElementById('message').textContent = message;
+      document.getElementById('higherBtn').disabled = true;
+      document.getElementById('lowerBtn').disabled = true;
+      document.getElementById('restartBtn').style.display = "inline-block";
+    }
+    
+    // Event listener for guessing "Higher"
+    document.getElementById('higherBtn').addEventListener('click', function() {
+      if (deck.length === 0) {
+        endGame("No more cards! Final score: " + score);
+        return;
+      }
+      let nextCard = drawCard();
+      displayCard(nextCard);
+      if (nextCard.value > currentCard.value) {
+        score++;
+        updateScore();
+        currentCard = nextCard;
+        document.getElementById('message').textContent = "Correct! Keep going...";
+      } else {
+        endGame("Wrong! Final score: " + score);
+      }
+    });
+    
+    // Event listener for guessing "Lower"
+    document.getElementById('lowerBtn').addEventListener('click', function() {
+      if (deck.length === 0) {
+        endGame("No more cards! Final score: " + score);
+        return;
+      }
+      let nextCard = drawCard();
+      displayCard(nextCard);
+      if (nextCard.value < currentCard.value) {
+        score++;
+        updateScore();
+        currentCard = nextCard;
+        document.getElementById('message').textContent = "Correct! Keep going...";
+      } else {
+        endGame("Wrong! Final score: " + score);
+      }
+    });
+    
+    // Restart the game when the restart button is clicked
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+    
+    // Initialize game on page load
+    startGame();
+  </script>
+</body>
+</html>

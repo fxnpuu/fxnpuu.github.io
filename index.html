@@ -2,11 +2,11 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Higher or Lower with Bonus Spin</title>
+  <title>Higher or Lower – Run Out of Cards</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      background-color: #f8f8f8;
       margin: 0;
       padding: 20px;
       text-align: center;
@@ -18,8 +18,9 @@
       display: inline-block;
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
-    h1 {
+    h1, h2 {
       margin-top: 0;
     }
     .card {
@@ -32,13 +33,25 @@
       margin: 5px;
       cursor: pointer;
     }
-    #scoreDisplay {
-      font-size: 20px;
-      margin: 10px;
+    #statusPanel, #shopPanel, #inventoryPanel {
+      margin-top: 10px;
+      text-align: left;
+      display: inline-block;
+      vertical-align: top;
+      width: 300px;
     }
-    #message {
-      font-size: 20px;
-      margin: 20px;
+    #shopPanel, #inventoryPanel {
+      border: 1px solid #aaa;
+      padding: 10px;
+      border-radius: 5px;
+      background: #fff;
+    }
+    .shopItem, .invItem {
+      border-bottom: 1px dashed #ccc;
+      padding: 5px 0;
+    }
+    .shopItem:last-child, .invItem:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
@@ -46,176 +59,59 @@
   <div id="game">
     <h1>Higher or Lower</h1>
     <div id="cardDisplay" class="card"></div>
-    <div id="scoreDisplay"></div>
     <div id="message"></div>
-    <!-- Main Guess Buttons -->
+    <!-- Guess buttons -->
     <button id="higherBtn">Higher</button>
     <button id="lowerBtn">Lower</button>
-    <!-- Bonus Spin Choices (hidden by default) -->
+    <!-- Bonus spin phase buttons -->
     <button id="spinBtn" style="display: none;">Spin for Bonus</button>
     <button id="continueBtn" style="display: none;">Continue</button>
+    <!-- Restart -->
     <button id="restartBtn" style="display: none;">Restart</button>
   </div>
 
+  <!-- Status Panel -->
+  <div id="statusPanel">
+    <h2>Status</h2>
+    <div id="moneyDisplay">Money: 0</div>
+    <div id="livesDisplay">Extra Lives: 0</div>
+    <button id="toggleShopBtn">Open Shop</button>
+  </div>
+
+  <!-- Shop Panel (hidden by default) -->
+  <div id="shopPanel" style="display:none;">
+    <h2>Shop</h2>
+    <div id="shopItems"></div>
+    <button id="closeShopBtn">Close Shop</button>
+  </div>
+
+  <!-- Inventory Panel -->
+  <div id="inventoryPanel">
+    <h2>Inventory</h2>
+    <div id="inventoryItems"></div>
+  </div>
+
   <script>
+    // Global game variables
     let deck = [];
     let currentCard = null;
-    let score = 0;
-    
+    let money = 0;
+    let extraLives = 0;
+    let inventory = []; // Holds shop items for later use
+    let guaranteedLower = false; // Flag for shop effect
+
+    // Card definitions
     const suits = ['♠', '♥', '♦', '♣'];
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     const rankValues = {
       '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-      'J': 11, 'Q': 12, 'K': 13, 'A': 14  // Ace is high
+      'J': 11, 'Q': 12, 'K': 13, 'A': 14
     };
 
-    // Create a deck of 52 cards
-    function createDeck() {
-      deck = [];
-      for (let suit of suits) {
-        for (let rank of ranks) {
-          deck.push({ suit: suit, rank: rank, value: rankValues[rank] });
-        }
-      }
-    }
-    
-    // Shuffle the deck using the Fisher-Yates algorithm
-    function shuffleDeck() {
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
-    }
-    
-    // Draw a card from the deck
-    function drawCard() {
-      return deck.pop();
-    }
-    
-    // Display the card on screen
-    function displayCard(card) {
-      const cardDisplay = document.getElementById('cardDisplay');
-      cardDisplay.textContent = card.rank + card.suit;
-    }
-    
-    // Update the score display
-    function updateScore() {
-      document.getElementById('scoreDisplay').textContent = "Score: " + score;
-    }
-    
-    // Start or restart the game
-    function startGame() {
-      createDeck();
-      shuffleDeck();
-      score = 0;
-      updateScore();
-      document.getElementById('message').textContent = "";
-      document.getElementById('restartBtn').style.display = "none";
-      // Hide bonus buttons at start
-      document.getElementById('spinBtn').style.display = "none";
-      document.getElementById('continueBtn').style.display = "none";
-      document.getElementById('higherBtn').disabled = false;
-      document.getElementById('lowerBtn').disabled = false;
-      currentCard = drawCard();
-      displayCard(currentCard);
-    }
-    
-    // End the game with a message
-    function endGame(message) {
-      document.getElementById('message').textContent = message;
-      document.getElementById('higherBtn').disabled = true;
-      document.getElementById('lowerBtn').disabled = true;
-      document.getElementById('spinBtn').style.display = "none";
-      document.getElementById('continueBtn').style.display = "none";
-      document.getElementById('restartBtn').style.display = "inline-block";
-    }
-    
-    // Trigger the bonus phase after a correct guess
-    function triggerBonusPhase() {
-      // Disable guessing buttons during bonus phase
-      document.getElementById('higherBtn').disabled = true;
-      document.getElementById('lowerBtn').disabled = true;
-      // Show bonus options
-      document.getElementById('spinBtn').style.display = "inline-block";
-      document.getElementById('continueBtn').style.display = "inline-block";
-      document.getElementById('message').textContent = "Correct! Would you like to spin for bonus? (Spin: risk game over, Continue: move on)";
-    }
-    
-    // Simulate the bonus spin inspired by Buckshot Roulette
-    function spinRoulette() {
-      const spinResult = Math.floor(Math.random() * 6) + 1; // 1 to 6
-      if (spinResult === 1) {
-        // Unlucky: game over
-        endGame("Unlucky spin! You got the live bullet. Final score: " + score);
-      } else {
-        // Lucky spin: add bonus points
-        score += 2;
-        updateScore();
-        document.getElementById('message').textContent = "Lucky spin! Bonus points awarded. Keep going...";
-        // Hide bonus options and re-enable guessing
-        document.getElementById('spinBtn').style.display = "none";
-        document.getElementById('continueBtn').style.display = "none";
-        document.getElementById('higherBtn').disabled = false;
-        document.getElementById('lowerBtn').disabled = false;
-      }
-    }
-    
-    // Continue without spinning (skip bonus)
-    function continueGame() {
-      document.getElementById('message').textContent = "Correct! Keep going...";
-      document.getElementById('spinBtn').style.display = "none";
-      document.getElementById('continueBtn').style.display = "none";
-      document.getElementById('higherBtn').disabled = false;
-      document.getElementById('lowerBtn').disabled = false;
-    }
-    
-    // Event listener for guessing "Higher"
-    document.getElementById('higherBtn').addEventListener('click', function() {
-      if (deck.length === 0) {
-        endGame("No more cards! Final score: " + score);
-        return;
-      }
-      let nextCard = drawCard();
-      displayCard(nextCard);
-      if (nextCard.value > currentCard.value) {
-        score++;
-        updateScore();
-        currentCard = nextCard;
-        // Trigger bonus phase for a chance at extra points
-        triggerBonusPhase();
-      } else {
-        endGame("Wrong guess! Final score: " + score);
-      }
-    });
-    
-    // Event listener for guessing "Lower"
-    document.getElementById('lowerBtn').addEventListener('click', function() {
-      if (deck.length === 0) {
-        endGame("No more cards! Final score: " + score);
-        return;
-      }
-      let nextCard = drawCard();
-      displayCard(nextCard);
-      if (nextCard.value < currentCard.value) {
-        score++;
-        updateScore();
-        currentCard = nextCard;
-        // Trigger bonus phase for a chance at extra points
-        triggerBonusPhase();
-      } else {
-        endGame("Wrong guess! Final score: " + score);
-      }
-    });
-    
-    // Event listeners for bonus choices
-    document.getElementById('spinBtn').addEventListener('click', spinRoulette);
-    document.getElementById('continueBtn').addEventListener('click', continueGame);
-    
-    // Restart the game when the restart button is clicked
-    document.getElementById('restartBtn').addEventListener('click', startGame);
-    
-    // Initialize game on page load
-    startGame();
-  </script>
-</body>
-</html>
+    // Shop items definitions
+    const shopItems = [
+      {name: "Extra Life", cost: 50, description: "Buy an extra life. (Immediate)", immediate: true, effect: function() { extraLives++; updateLives(); document.getElementById('message').textContent = "Extra life acquired!"; }},
+      {name: "Burn 10 Cards", cost: 80, description: "Remove 10 cards from the deck.", immediate: false, effect: function() {
+          let count = Math.min(10, deck.length);
+          deck.splice(deck.length - count, count);
+          document.getElementById('message').textContent = "Burned "

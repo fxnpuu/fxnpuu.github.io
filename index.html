@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Higher or Lower Card Game</title>
+  <title>Higher or Lower with Bonus Spin</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -48,8 +48,12 @@
     <div id="cardDisplay" class="card"></div>
     <div id="scoreDisplay"></div>
     <div id="message"></div>
+    <!-- Main Guess Buttons -->
     <button id="higherBtn">Higher</button>
     <button id="lowerBtn">Lower</button>
+    <!-- Bonus Spin Choices (hidden by default) -->
+    <button id="spinBtn" style="display: none;">Spin for Bonus</button>
+    <button id="continueBtn" style="display: none;">Continue</button>
     <button id="restartBtn" style="display: none;">Restart</button>
   </div>
 
@@ -107,10 +111,13 @@
       updateScore();
       document.getElementById('message').textContent = "";
       document.getElementById('restartBtn').style.display = "none";
-      currentCard = drawCard();
-      displayCard(currentCard);
+      // Hide bonus buttons at start
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
       document.getElementById('higherBtn').disabled = false;
       document.getElementById('lowerBtn').disabled = false;
+      currentCard = drawCard();
+      displayCard(currentCard);
     }
     
     // End the game with a message
@@ -118,7 +125,48 @@
       document.getElementById('message').textContent = message;
       document.getElementById('higherBtn').disabled = true;
       document.getElementById('lowerBtn').disabled = true;
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
       document.getElementById('restartBtn').style.display = "inline-block";
+    }
+    
+    // Trigger the bonus phase after a correct guess
+    function triggerBonusPhase() {
+      // Disable guessing buttons during bonus phase
+      document.getElementById('higherBtn').disabled = true;
+      document.getElementById('lowerBtn').disabled = true;
+      // Show bonus options
+      document.getElementById('spinBtn').style.display = "inline-block";
+      document.getElementById('continueBtn').style.display = "inline-block";
+      document.getElementById('message').textContent = "Correct! Would you like to spin for bonus? (Spin: risk game over, Continue: move on)";
+    }
+    
+    // Simulate the bonus spin inspired by Buckshot Roulette
+    function spinRoulette() {
+      const spinResult = Math.floor(Math.random() * 6) + 1; // 1 to 6
+      if (spinResult === 1) {
+        // Unlucky: game over
+        endGame("Unlucky spin! You got the live bullet. Final score: " + score);
+      } else {
+        // Lucky spin: add bonus points
+        score += 2;
+        updateScore();
+        document.getElementById('message').textContent = "Lucky spin! Bonus points awarded. Keep going...";
+        // Hide bonus options and re-enable guessing
+        document.getElementById('spinBtn').style.display = "none";
+        document.getElementById('continueBtn').style.display = "none";
+        document.getElementById('higherBtn').disabled = false;
+        document.getElementById('lowerBtn').disabled = false;
+      }
+    }
+    
+    // Continue without spinning (skip bonus)
+    function continueGame() {
+      document.getElementById('message').textContent = "Correct! Keep going...";
+      document.getElementById('spinBtn').style.display = "none";
+      document.getElementById('continueBtn').style.display = "none";
+      document.getElementById('higherBtn').disabled = false;
+      document.getElementById('lowerBtn').disabled = false;
     }
     
     // Event listener for guessing "Higher"
@@ -133,9 +181,10 @@
         score++;
         updateScore();
         currentCard = nextCard;
-        document.getElementById('message').textContent = "Correct! Keep going...";
+        // Trigger bonus phase for a chance at extra points
+        triggerBonusPhase();
       } else {
-        endGame("Wrong! Final score: " + score);
+        endGame("Wrong guess! Final score: " + score);
       }
     });
     
@@ -151,11 +200,16 @@
         score++;
         updateScore();
         currentCard = nextCard;
-        document.getElementById('message').textContent = "Correct! Keep going...";
+        // Trigger bonus phase for a chance at extra points
+        triggerBonusPhase();
       } else {
-        endGame("Wrong! Final score: " + score);
+        endGame("Wrong guess! Final score: " + score);
       }
     });
+    
+    // Event listeners for bonus choices
+    document.getElementById('spinBtn').addEventListener('click', spinRoulette);
+    document.getElementById('continueBtn').addEventListener('click', continueGame);
     
     // Restart the game when the restart button is clicked
     document.getElementById('restartBtn').addEventListener('click', startGame);

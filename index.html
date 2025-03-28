@@ -111,7 +111,11 @@
 
     // Shop items definitions
     const shopItems = [
-      {name: "Extra Life", cost: 50, description: "Buy an extra life. (Immediate)", immediate: true, effect: function() { extraLives++; updateLives(); document.getElementById('message').textContent = "Extra life acquired!"; }},
+      {name: "Extra Life", cost: 50, description: "Buy an extra life. (Immediate)", immediate: true, effect: function() { 
+          extraLives++; 
+          updateLives(); 
+          document.getElementById('message').textContent = "Extra life acquired!"; 
+      }},
       {name: "Burn 10 Cards", cost: 80, description: "Remove 10 cards from the deck.", immediate: false, effect: function() {
           let count = Math.min(10, deck.length);
           deck.splice(deck.length - count, count);
@@ -122,11 +126,11 @@
           guaranteedLower = true;
           document.getElementById('message').textContent = "Guaranteed Lower activated for next draw.";
       }},
-      {name: "Skip One Card", cost: 20, description: "Discard the next card.", immediate: false, effect: function() {
+      {name: "Skip One Card", cost: 20, description: "Discard the current card (skip this round).", immediate: false, effect: function() {
           if (deck.length > 0) {
-             let skipped = deck.pop();
-             updateCardsLeft();
-             document.getElementById('message').textContent = "Skipped card: " + skipped.rank + skipped.suit;
+             document.getElementById('message').textContent = "Skipped current card: " + currentCard.rank + currentCard.suit;
+             currentCard = drawCard();
+             displayCard(currentCard);
           } else {
              document.getElementById('message').textContent = "No cards to skip.";
           }
@@ -143,9 +147,9 @@
              shuffleDeck();
              document.getElementById('message').textContent = "Deck rearranged.";
       }},
-      // New Same Card Wins: Passive effect – protects when drawn equal to current card.
+      // Renamed Bonus Card to Same Card Wins
       {name: "Same Card Wins", cost: 20, description: "Protects you if the next card equals the current card. (Passive)", immediate: false, passive: true, effect: function() {
-          // This effect is automatic; not used manually.
+          // Automatic passive effect.
       }}
     ];
 
@@ -167,7 +171,6 @@
         invDiv.textContent = "No items in inventory.";
         return;
       }
-      // Aggregate counts by item name.
       let counts = {};
       inventory.forEach(item => {
         if (!counts[item.name]) {
@@ -175,7 +178,6 @@
         }
         counts[item.name].count++;
       });
-      // Display each item group.
       for (let key in counts) {
         let group = counts[key];
         const itemDiv = document.createElement('div');
@@ -186,8 +188,6 @@
           const useBtn = document.createElement('button');
           useBtn.textContent = "Use";
           useBtn.addEventListener('click', function() {
-            // Use one instance of this item.
-            // Remove one occurrence from inventory.
             let index = inventory.findIndex(i => i.name === group.item.name);
             if (index !== -1) {
               inventory.splice(index, 1);
@@ -218,7 +218,6 @@
     }
     function drawCard() {
       if (guaranteedLower) {
-        // Force draw a card that is lower than currentCard if possible.
         const lowerCards = deck.filter(card => card.value < currentCard.value);
         if (lowerCards.length > 0) {
           const idx = Math.floor(Math.random() * lowerCards.length);
@@ -275,7 +274,6 @@
       return false;
     }
     function triggerBonusPhase() {
-      // Disable guessing buttons while in bonus phase.
       document.getElementById('higherBtn').disabled = true;
       document.getElementById('lowerBtn').disabled = true;
       document.getElementById('spinBtn').style.display = "inline-block";
@@ -287,7 +285,7 @@
       if (spinResult === 1) {
         endGame("Unlucky spin! You got the live bullet. Final money: " + money);
       } else {
-        money += 20; // bonus money
+        money += 20;
         updateMoney();
         document.getElementById('message').textContent = "Lucky spin! Bonus awarded. Keep going...";
         document.getElementById('spinBtn').style.display = "none";
@@ -309,17 +307,16 @@
       if (checkWinCondition()) return;
       let nextCard = drawCard();
       displayCard(nextCard);
-      // Check for Same Card Wins protection if the drawn card equals currentCard.
+      // Check for Same Card Wins protection if drawn card equals current card.
       if (nextCard.value === currentCard.value) {
         let bonusIdx = inventory.findIndex(item => item.name === "Same Card Wins");
         if (bonusIdx !== -1) {
-          // Consume Same Card Wins to protect you
           inventory.splice(bonusIdx, 1);
           updateInventory();
           money += 10;
           updateMoney();
           currentCard = nextCard;
-          document.getElementById('message').textContent = "Same Card Wins used! Same card protected you.";
+          document.getElementById('message').textContent = "Same Card Wins used! You are protected.";
           triggerBonusPhase();
           return;
         }
@@ -330,7 +327,6 @@
         currentCard = nextCard;
         triggerBonusPhase();
       } else {
-        // Wrong guess: use extra life if available.
         if (extraLives > 0) {
           extraLives--;
           updateLives();
@@ -354,7 +350,7 @@
           money += 10;
           updateMoney();
           currentCard = nextCard;
-          document.getElementById('message').textContent = "Same Card Wins used! Same card protected you.";
+          document.getElementById('message').textContent = "Same Card Wins used! You are protected.";
           triggerBonusPhase();
           return;
         }
@@ -397,11 +393,9 @@
           if (money >= item.cost) {
             money -= item.cost;
             updateMoney();
-            // If immediate, apply effect; otherwise, add to inventory.
             if (item.immediate) {
               item.effect();
             } else {
-              // For passive items like Same Card Wins, simply add to inventory.
               inventory.push(item);
               updateInventory();
               document.getElementById('message').textContent = item.name + " purchased and added to inventory.";
@@ -414,7 +408,6 @@
         shopDiv.appendChild(itemDiv);
       });
     }
-    // Toggle shop panel visibility
     document.getElementById('toggleShopBtn').addEventListener('click', function() {
       const shopPanel = document.getElementById('shopPanel');
       if (shopPanel.style.display === "none") {
